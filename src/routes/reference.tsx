@@ -21,7 +21,6 @@ import { InfoList } from "@/components/cis/blocks";
 import { StatusBadge } from "@/components/cis/status-badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Can, useCan } from "@/lib/auth/permissions";
 import { P } from "@/lib/auth/permission-codes";
 import { usePaged } from "@/lib/use-paged";
@@ -396,20 +395,6 @@ function ReferencePage() {
         </TabsContent>
 
         <TabsContent value="mappings" className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Input
-              aria-label="کد سامانه بیرونی"
-              placeholder="کد سامانه بیرونی"
-              value={mp.filters.externalSystemCode}
-              onChange={(e) => mp.setFilter("externalSystemCode", e.target.value)}
-            />
-            <Input
-              aria-label="نوع موجودیت داخلی"
-              placeholder="نوع موجودیت داخلی"
-              value={mp.filters.internalEntityType}
-              onChange={(e) => mp.setFilter("internalEntityType", e.target.value)}
-            />
-          </div>
           <DataTable
             rows={mappings.data?.items ?? []}
             loading={mappings.isPending}
@@ -419,8 +404,8 @@ function ReferencePage() {
             server={mp.server(mappings.data?.total ?? 0)}
             rowKey={(r) => r.id}
             columns={[
-              { key: "system", header: "سامانه" },
-              { key: "entityType", header: "نوع موجودیت" },
+              { key: "system", header: "سامانه", filter: { type: "text", param: "externalSystemCode" } },
+              { key: "entityType", header: "نوع موجودیت", filter: { type: "text", param: "internalEntityType" } },
               { key: "internalCode", header: "کد داخلی" },
               { key: "externalCode", header: "کد بیرونی" },
               { key: "externalName", header: "نام بیرونی" },

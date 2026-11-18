@@ -9,14 +9,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ErrorState } from "./query-state";
+import { ColumnFilterCell, inferFilter, matchesFilter, filterParams, type ColumnFilter, type FilterOption } from "./column-filter";
 import { faNum } from "@/lib/jalali";
 import { downloadCsv } from "@/lib/export";
 import { cn } from "@/lib/utils";
 
-export type Column<T> = { key: string; header: string; cell?: (r: T) => ReactNode; value?: (r: T) => string | number | undefined; className?: string; hidden?: boolean; sortable?: boolean };
+export type Column<T> = {
+  key: string; header: string; cell?: (r: T) => ReactNode; value?: (r: T) => string | number | undefined; className?: string; hidden?: boolean; sortable?: boolean;
+  /** Filter shown under the header. Server tables only get the filters the endpoint accepts (declare them here or via a matching `filters` entry); local tables infer one per column. `false` turns it off. */
+  filter?: ColumnFilter | false;
+};
+export type { ColumnFilter, FilterOption };
 export type RowAction<T> = { label: string; icon?: LucideIcon; onClick: (r: T) => void; destructive?: boolean; show?: (r: T) => boolean };
-export type FilterOption = string | { value: string; label: string };
-export type Filter = { key: string; label: string; options: FilterOption[] };
+/** A select filter. When `column` (or `key`, case-insensitive) names a visible column it is drawn in that column's filter cell; otherwise in the toolbar. */
+export type Filter = { key: string; label: string; options: FilterOption[]; column?: string };
 
 type Props<T> = {
   rows: T[]; columns: Column<T>[]; rowKey: (r: T) => string | number;
@@ -47,12 +53,31 @@ export function DataTable<T>({ rows, columns, rowKey, searchPlaceholder = "جس�
     return () => clearTimeout(t);
   }, [q]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Resolve each column's filter: explicit > matching select `filters` entry > inferred from data (local tables only).
+  const colFilters = useMemo(() => {
+    const m = new Map<string, ColumnFilter>();
+    for (const c of columns) {
+      if (c.filter === false) continue;
+      const f = filters.find((x) => (x.column ?? x.key).toLowerCase() === c.key.toLowerCase());
+      const cf: ColumnFilter | undefined = c.filter ?? (f ? { type: "select", param: f.key, options: f.options, raw: true } : server ? undefined : inferFilter(rows.map((r) => (r as Record<string, unknown>)[c.key] ?? get(c, r))));
+      if (cf) m.set(c.key, cf);
+    }
+    return m;
+  }, [columns, filters, rows, server]);
+  const toolbarFilters = useMemo(() => filters.filter((f) => ![...colFilters.values()].some((cf) => cf.type === "select" && cf.param === f.key)), [filters, colFilters]);
+
   const data = useMemo(() => {
     let d = rows;
     if (!server) {
       d = d.filter((r) => {
         if (q && !columns.some((c) => String(get(c, r) ?? "").includes(q))) return false;
-        return filters.every((f) => !filterValues[f.key] || filterValues[f.key] === "all" || String((r as Record<string, unknown>)[f.key]) === filterValues[f.key]);
+        if (!toolbarFilters.every((f) => !filterValues[f.key] || filterValues[f.key] === "all" || String((r as Record<string, unknown>)[f.key]) === filterValues[f.key])) return false;
+        return columns.every((c) => {
+          const cf = colFilters.get(c.key);
+          if (!cf) return true;
+          const raw = (r as Record<string, unknown>)[cf.type === "select" && cf.raw ? (cf.param ?? c.key) : c.key];
+          return matchesFilter(cf, c.key, filterValues, cf.type === "select" && cf.raw ? raw : raw ?? get(c, r));
+        });
       });
     }
     if (sort) {
@@ -60,7 +85,7 @@ export function DataTable<T>({ rows, columns, rowKey, searchPlaceholder = "جس�
       if (c) d = [...d].sort((a, b) => String(get(c, a) ?? "").localeCompare(String(get(c, b) ?? ""), "fa", { numeric: true }) * sort.dir);
     }
     return d;
-  }, [rows, q, filterValues, sort, columns, filters, server]);
+  }, [rows, q, filterValues, sort, columns, toolbarFilters, colFilters, server]);
 
   const page = server ? server.page - 1 : localPage;
   const size = server ? server.pageSize : pageSize;
@@ -72,6 +97,12 @@ export function DataTable<T>({ rows, columns, rowKey, searchPlaceholder = "جس�
   const setPage = (p: number) => (server ? server.onPageChange(p + 1) : setLocalPage(p));
   const setFilter = (k: string, v: string) => { if (server?.onFilterChange) server.onFilterChange(k, v === "all" ? "" : v); else { setLocalFilters({ ...localFilters, [k]: v }); setLocalPage(0); } };
   const colSpan = visible.length + (selectable ? 1 : 0) + (actions ? 1 : 0);
+  const shownFilters = visible.filter((c) => colFilters.has(c.key));
+  const activeParams = shownFilters.flatMap((c) => filterParams(colFilters.get(c.key)!, c.key)).filter((k) => filterValues[k] && filterValues[k] !== "all");
+  const clearFilters = () => {
+    if (server?.onFilterChange) activeParams.forEach((k) => server.onFilterChange?.(k, ""));
+    else { const n = { ...localFilters }; activeParams.forEach((k) => delete n[k]); setLocalFilters(n); setLocalPage(0); }
+  };
 
   return (
     <div className="overflow-hidden rounded-lg border bg-card">
@@ -83,13 +114,14 @@ export function DataTable<T>({ rows, columns, rowKey, searchPlaceholder = "جس�
             {q && <button type="button" onClick={() => { setQ(""); server?.onSearchChange?.(""); }} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" aria-label="پاک کردن جستجو"><X className="size-4" /></button>}
           </div>
         )}
-        {filters.map((f) => (
+        {toolbarFilters.map((f) => (
           <Select key={f.key} value={filterValues[f.key] || "all"} onValueChange={(v) => setFilter(f.key, v)}>
             <SelectTrigger className="h-9 w-auto min-w-32" aria-label={f.label}><SelectValue placeholder={f.label} /></SelectTrigger>
             <SelectContent><SelectItem value="all">همه {f.label}</SelectItem>{f.options.map((o) => <SelectItem key={fv(o)} value={fv(o)}>{fl(o)}</SelectItem>)}</SelectContent>
           </Select>
         ))}
-        <div className="mr-auto flex flex-wrap gap-2">
+        <div className="ms-auto flex flex-wrap gap-2">
+          {activeParams.length > 0 && <Button variant="ghost" size="sm" className="h-9" onClick={clearFilters}><X />پاک کردن فیلترها</Button>}
           {toolbar}
           <DropdownMenu>
             <DropdownMenuTrigger asChild><Button variant="outline" size="icon" className="size-9" aria-label="انتخاب ستون‌ها"><Columns3 /></Button></DropdownMenuTrigger>
@@ -124,7 +156,22 @@ export function DataTable<T>({ rows, columns, rowKey, searchPlaceholder = "جس�
               );
             })}
             {actions && <TableHead className="w-10"><span className="sr-only">عملیات</span></TableHead>}
-          </TableRow></TableHeader>
+          </TableRow>
+          {shownFilters.length > 0 && (
+            <TableRow className="bg-muted/20 hover:bg-muted/20">
+              {selectable && <TableHead className="w-12 border-l" />}
+              {visible.map((c) => {
+                const cf = colFilters.get(c.key);
+                return (
+                  <TableHead key={c.key} className={cn("h-auto py-2 align-middle", c.className)}>
+                    {cf && <ColumnFilterCell filter={cf} columnKey={c.key} label={c.header} values={filterValues} debounce={!!server} onChange={setFilter} />}
+                  </TableHead>
+                );
+              })}
+              {actions && <TableHead className="w-10" />}
+            </TableRow>
+          )}
+          </TableHeader>
           <TableBody>
             {loading && Array.from({ length: 5 }, (_, i) => <TableRow key={`sk${i}`}>{Array.from({ length: colSpan }, (_, j) => <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>)}</TableRow>)}
             {!loading && Boolean(error) && <TableRow><TableCell colSpan={colSpan} className="p-4"><ErrorState error={error} onRetry={onRetry} compact className="border-0" /></TableCell></TableRow>}

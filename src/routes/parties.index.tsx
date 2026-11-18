@@ -2,7 +2,6 @@ import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/cis/app-shell";
 import { DataTable, tableState } from "@/components/cis/data-table";
@@ -75,23 +74,6 @@ function PartiesPage() {
           <TabsTrigger value="duplicates">موارد مشکوک به تکرار</TabsTrigger>
         </TabsList>
         <TabsContent value="list">
-          <div className="mb-4 grid gap-3 sm:grid-cols-3">
-            {(
-              [
-                { key: "nationalId", label: "کد ملی" },
-                { key: "name", label: "نام" },
-                { key: "phone", label: "تلفن" },
-              ] as const
-            ).map((f) => (
-              <label key={f.key} className="space-y-1 text-sm">
-                {f.label}
-                <Input
-                  value={pg.filters[f.key]}
-                  onChange={(e) => pg.setFilter(f.key, e.target.value)}
-                />
-              </label>
-            ))}
-          </div>
           <DataTable
             {...tableState(q)}
             server={pg.server(q.data?.total ?? 0)}
@@ -102,10 +84,10 @@ function PartiesPage() {
             emptyAction={createAction}
             columns={[
               { key: "code", header: "کد شخص" },
-              { key: "name", header: "نام" },
+              { key: "name", header: "نام", filter: { type: "text", param: "name" } },
               { key: "type", header: "نوع", cell: (r) => (r.isOrganization ? "حقوقی" : "حقیقی") },
-              { key: "nationalId", header: "کد / شناسه ملی" },
-              { key: "mobile", header: "تلفن همراه" },
+              { key: "nationalId", header: "کد / شناسه ملی", filter: { type: "text", param: "nationalId" } },
+              { key: "mobile", header: "تلفن همراه", filter: { type: "text", param: "phone" } },
               { key: "status", header: "وضعیت", cell: (r) => <StatusBadge status={r.status} /> },
             ]}
             actions={[{ label: "مشاهده پرونده", onClick: (r) => void open(r.id) }]}

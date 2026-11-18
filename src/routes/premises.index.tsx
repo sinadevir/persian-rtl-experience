@@ -2,7 +2,6 @@ import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/cis/app-shell";
 import { DataTable, tableState } from "@/components/cis/data-table";
@@ -102,23 +101,6 @@ function PremisesPage() {
           <TabsTrigger value="units">واحدها</TabsTrigger>
         </TabsList>
         <TabsContent value="premises">
-          <div className="mb-3 grid gap-3 sm:grid-cols-3">
-            {(
-              [
-                { key: "Code", label: "کد ملک" },
-                { key: "Address", label: "نشانی" },
-                { key: "Status", label: "کد وضعیت" },
-              ] as const
-            ).map((f) => (
-              <label key={f.key} className="space-y-1 text-sm">
-                {f.label}
-                <Input
-                  value={pg.filters[f.key]}
-                  onChange={(e) => pg.setFilter(f.key, e.target.value)}
-                />
-              </label>
-            ))}
-          </div>
           <DataTable
             {...tableState(q)}
             server={pg.server(q.data?.total ?? 0)}
@@ -128,11 +110,11 @@ function PremisesPage() {
             emptyAction={add}
             onRowClick={(r) => void nav({ to: "/premises/$id", params: { id: String(r.id) } })}
             columns={[
-              { key: "code", header: "کد ملک" },
+              { key: "code", header: "کد ملک", filter: { type: "text", param: "Code" } },
               { key: "name", header: "نام ملک" },
-              { key: "address", header: "نشانی" },
+              { key: "address", header: "نشانی", filter: { type: "text", param: "Address" } },
               { key: "postalCode", header: "کد پستی" },
-              { key: "status", header: "وضعیت", cell: (r) => <StatusBadge status={r.status} /> },
+              { key: "status", header: "وضعیت", cell: (r) => <StatusBadge status={r.status} />, filter: { type: "text", param: "Status", placeholder: "کد وضعیت" } },
             ]}
           />
         </TabsContent>

@@ -6,9 +6,6 @@ import { PageHeader } from "@/components/cis/app-shell";
 import { DataTable } from "@/components/cis/data-table";
 import { InfoList } from "@/components/cis/blocks";
 import { ForbiddenState } from "@/components/cis/query-state";
-import { JalaliDatePicker } from "@/components/cis/jalali-date-picker";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
@@ -19,7 +16,7 @@ import {
 import { useCan } from "@/lib/auth/permissions";
 import { P } from "@/lib/auth/permission-codes";
 import { usePaged } from "@/lib/use-paged";
-import { toDateOnly, toJalaliDateTime } from "@/lib/jalali";
+import { toJalaliDateTime } from "@/lib/jalali";
 import { seo } from "@/lib/seo";
 
 export const Route = createFileRoute("/audit")({
@@ -51,10 +48,8 @@ function AuditEntries() {
     from: "",
     to: "",
   });
-  const [from, setFrom] = useState<Date>();
-  const [to, setTo] = useState<Date>();
   const [selected, setSelected] = useState<AuditEntry>();
-  const invalidRange = !!from && !!to && from > to;
+  const invalidRange = !!pg.filters.from && !!pg.filters.to && pg.filters.from > pg.filters.to;
   const query = useQuery({
     ...auditQuery({
       page: pg.page,
@@ -69,79 +64,20 @@ function AuditEntries() {
     enabled: !invalidRange,
   });
 
-  const fields = [
-    ["module", "ماژول"],
-    ["entityType", "نوع موجودیت"],
-    ["entityId", "شناسه موجودیت"],
-    ["action", "عملیات"],
-  ] as const;
-
   return (
     <div className="space-y-6">
       <PageHeader
         title="ردپای حسابرسی"
         desc="رویدادها فقط‌خواندنی هستند و امکان تغییر یا حذف آن‌ها وجود ندارد."
       />
-      <section className="space-y-3 rounded-lg border bg-card p-4">
-        <h2 className="font-semibold">فیلتر رویدادها</h2>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {fields.map(([key, label]) => (
-            <label key={key} className="space-y-1 text-sm">
-              <span>{label}</span>
-              <Input value={pg.filters[key]} onChange={(e) => pg.setFilter(key, e.target.value)} />
-            </label>
-          ))}
-          <div className="space-y-1 text-sm">
-            <label htmlFor="audit-from" className="block">
-              از تاریخ
-            </label>
-            <JalaliDatePicker
-              id="audit-from"
-              value={from}
-              onChange={(d) => {
-                setFrom(d);
-                pg.setFilter("from", toDateOnly(d));
-              }}
-            />
-          </div>
-          <div className="space-y-1 text-sm">
-            <label htmlFor="audit-to" className="block">
-              تا تاریخ
-            </label>
-            <JalaliDatePicker
-              id="audit-to"
-              value={to}
-              onChange={(d) => {
-                setTo(d);
-                pg.setFilter("to", toDateOnly(d));
-              }}
-            />
-          </div>
-          <Button
-            className="self-end"
-            variant="outline"
-            onClick={() => {
-              setFrom(undefined);
-              setTo(undefined);
-              fields.forEach(([key]) => pg.setFilter(key, ""));
-              pg.setFilter("from", "");
-              pg.setFilter("to", "");
-            }}
-          >
-            پاک کردن فیلترها
-          </Button>
-        </div>
-        {invalidRange && (
-          <p role="alert" className="text-sm text-destructive">
-            تاریخ پایان نباید پیش از تاریخ شروع باشد.
-          </p>
-        )}
-      </section>
-
-      {!invalidRange && (
-        <DataTable
-          rows={query.data?.items ?? []}
-          loading={query.isPending}
+      {invalidRange && (
+        <p role="alert" className="text-sm text-destructive">
+          تاریخ پایان نباید پیش از تاریخ شروع باشد.
+        </p>
+      )}
+      <DataTable
+          rows={invalidRange ? [] : (query.data?.items ?? [])}
+          loading={!invalidRange && query.isPending}
           fetching={query.isFetching}
           error={query.error ?? undefined}
           onRetry={() => void query.refetch()}
@@ -150,17 +86,16 @@ function AuditEntries() {
           rowKey={(r) => r.id}
           onRowClick={setSelected}
           columns={[
-            { key: "at", header: "زمان", cell: (r) => (r.at ? toJalaliDateTime(r.at) : "—") },
-            { key: "module", header: "ماژول" },
-            { key: "entityType", header: "نوع موجودیت" },
-            { key: "entityId", header: "شناسه موجودیت" },
-            { key: "action", header: "عملیات" },
+            { key: "at", header: "زمان", cell: (r) => (r.at ? toJalaliDateTime(r.at) : "—"), filter: { type: "dateRange", from: "from", to: "to" } },
+            { key: "module", header: "ماژول", filter: { type: "text" } },
+            { key: "entityType", header: "نوع موجودیت", filter: { type: "text" } },
+            { key: "entityId", header: "شناسه موجودیت", filter: { type: "text" } },
+            { key: "action", header: "عملیات", filter: { type: "text" } },
             { key: "actor", header: "عامل" },
           ]}
           emptyText="رویدادی با این شرایط پیدا نشد."
           exportName="audit-entries"
         />
-      )}
 
       <Sheet
         open={!!selected}

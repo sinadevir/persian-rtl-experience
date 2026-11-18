@@ -15,6 +15,8 @@
 - [x] Full RTL: tables inside tabs, tabs, menus, fields, detail lists, form close button, switches
 - [x] Persian dates in Persian order (weekday day month year), Persian comma
 - [x] Smaller search bars (page header and tables)
+- [x] Per-column filters in the first table row (type fits the column / what the server accepts); audit filter box moved into the table
+- [x] System blue = logo blue (#004FAC, light #29A4DD)
 
 Open (need the customer / backend team):
 - [ ] Real server addresses and identity-provider settings (entered in «تنظیمات اتصال»); backend must allow the app's origin (CORS)
