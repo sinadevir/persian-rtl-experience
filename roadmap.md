@@ -19,5 +19,6 @@
 - [x] System blue = logo blue (#004FAC, light #29A4DD)
 
 Open (need the customer / backend team):
+- [ ] Public GitHub repo «test-front-sazaman» — user connects Git sync in Project settings → Git, renames repo and sets it public on GitHub
 - [ ] Real server addresses and identity-provider settings (entered in «تنظیمات اتصال»); backend must allow the app's origin (CORS)
 - [ ] Official code lists (relationship policies, occupancy right types, etc.) — forms read them from reference data
