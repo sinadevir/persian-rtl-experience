@@ -1,11 +1,11 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Users, Loader2, CalendarDays, ChevronLeft } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import logo from "@/assets/abfa-logo.png.asset.json";
 import type { NavItem } from "@/lib/nav";
-import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, SidebarFooter, SidebarRail } from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar, SidebarFooter, SidebarRail } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -37,8 +37,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:right-2 focus:top-2 focus:z-50 focus:rounded focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-foreground">رفتن به محتوای اصلی</a>
       <Sidebar side="right" collapsible="icon">
         <SidebarHeader className="border-b border-sidebar-border">
-          <Link to="/" className="flex items-center gap-2.5 px-1 py-2">
-            <img src={logo.url} alt="نشان آب و فاضلاب" className="size-9 shrink-0 rounded-full bg-card" />
+          <Link to="/" className="flex items-center gap-2.5 px-1 py-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+            <img src={logo.url} alt="نشان آب و فاضلاب" className="size-9 shrink-0 rounded-full bg-card object-contain p-0.5 group-data-[collapsible=icon]:size-8" />
             <div className="leading-tight group-data-[collapsible=icon]:hidden">
               <div className="text-sm font-bold">سامانه امور مشترکین</div>
               <div className="text-xs text-sidebar-foreground/60">شرکت آب و فاضلاب</div>
@@ -92,6 +92,16 @@ function NavCategory({ label, items, activeTo }: { label: string; items: NavItem
   const hasActive = items.some((i) => i.to === activeTo);
   const [open, setOpen] = useState(hasActive);
   useEffect(() => { if (hasActive) setOpen(true); }, [hasActive]);
+  const sidebar = useSidebar();
+  const nav = useNavigate();
+  // Collapsed (icons only): a click opens the menu, unfolds this category and goes to its first page.
+  const openFromIcons = (e: MouseEvent) => {
+    if (sidebar.isMobile || sidebar.state !== "collapsed") return;
+    e.preventDefault();
+    sidebar.setOpen(true);
+    setOpen(true);
+    if (!hasActive) void nav({ to: items[0]!.to });
+  };
   const Lead = items[0]!.icon;
   return (
     <SidebarGroup className="py-0.5">
@@ -99,7 +109,7 @@ function NavCategory({ label, items, activeTo }: { label: string; items: NavItem
         <Collapsible open={open} onOpenChange={setOpen} asChild className="group/collapsible">
           <SidebarMenuItem>
             <CollapsibleTrigger asChild>
-              <SidebarMenuButton tooltip={label} className="font-semibold data-[state=open]:text-sidebar-accent-foreground" data-active-group={hasActive || undefined}>
+              <SidebarMenuButton tooltip={label} onClick={openFromIcons} className="font-semibold data-[state=open]:text-sidebar-accent-foreground" data-active-group={hasActive || undefined}>
                 <Lead />
                 <span>{label}</span>
                 {hasActive && !open && <span className="size-1.5 rounded-full bg-sidebar-primary" aria-hidden />}

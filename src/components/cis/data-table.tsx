@@ -110,7 +110,7 @@ export function DataTable<T>({ rows, columns, rowKey, searchPlaceholder = "جس�
       <div className={cn("relative overflow-x-auto", fetching && !loading && "opacity-70 transition-opacity")}>
         <Table>
           <TableHeader><TableRow className="bg-muted/50">
-            {selectable && <TableHead className="w-10"><Checkbox aria-label="انتخاب همه" checked={view.length > 0 && view.every((r) => sel.has(rowKey(r)))} onCheckedChange={(v) => { const n = new Set(sel); view.forEach((r) => (v ? n.add(rowKey(r)) : n.delete(rowKey(r)))); setSel(n); }} /></TableHead>}
+            {selectable && <TableHead className="w-12 border-l px-4 text-center"><Checkbox className="mx-auto" aria-label="انتخاب همه" checked={view.length > 0 && view.every((r) => sel.has(rowKey(r)))} onCheckedChange={(v) => { const n = new Set(sel); view.forEach((r) => (v ? n.add(rowKey(r)) : n.delete(rowKey(r)))); setSel(n); }} /></TableHead>}
             {visible.map((c) => {
               const active = sort?.key === c.key;
               return (
@@ -134,7 +134,7 @@ export function DataTable<T>({ rows, columns, rowKey, searchPlaceholder = "جس�
             {!loading && !error && view.map((r) => (
               <TableRow key={rowKey(r)} className={cn(onRowClick && "cursor-pointer focus-visible:bg-muted focus-visible:outline-none")} tabIndex={onRowClick ? 0 : undefined}
                 onClick={() => onRowClick?.(r)} onKeyDown={(e) => { if (onRowClick && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onRowClick(r); } }}>
-                {selectable && <TableCell onClick={(e) => e.stopPropagation()}><Checkbox aria-label="انتخاب ردیف" checked={sel.has(rowKey(r))} onCheckedChange={(v) => { const n = new Set(sel); if (v) n.add(rowKey(r)); else n.delete(rowKey(r)); setSel(n); }} /></TableCell>}
+                {selectable && <TableCell className="w-12 border-l px-4 text-center" onClick={(e) => e.stopPropagation()}><Checkbox className="mx-auto" aria-label="انتخاب ردیف" checked={sel.has(rowKey(r))} onCheckedChange={(v) => { const n = new Set(sel); if (v) n.add(rowKey(r)); else n.delete(rowKey(r)); setSel(n); }} /></TableCell>}
                 {visible.map((c) => <TableCell key={c.key} className={cn("whitespace-nowrap", dense && "py-1.5", c.className)}>{c.cell ? c.cell(r) : (() => { const v: unknown = get(c, r); return v === true || v === "true" ? "بله" : v === false || v === "false" ? "خیر" : String(v ?? "—") || "—"; })()}</TableCell>)}
                 {actions && (
                   <TableCell onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>

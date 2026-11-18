@@ -276,7 +276,7 @@ const SidebarTrigger = React.forwardRef<
       }}
       {...props}
     >
-      <PanelLeft />
+      <PanelLeft className="rtl:-scale-x-100" />
       <span className="sr-only">باز و بسته کردن منو</span>
     </Button>
   );
